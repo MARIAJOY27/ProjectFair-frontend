@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import Header from '../components/Header'
 import { Row, Col } from 'react-bootstrap';
 import MyProject from '../components/MyProject';
@@ -6,13 +6,21 @@ import Profile from '../components/Profile';
 
 function Dashboard({dashboard}) {
   const dash = dashboard
+  const [username, setUsername] = useState("")
+
+  useEffect(()=>{
+    if(sessionStorage.getItem("existingUser")){
+      setUsername(JSON.parse(sessionStorage.getItem("existingUser")).username)
+    }
+  },[])
+  console.log(username);
 
   return (
     <div>
     <Header dash ={dash}/>
 
     <div className='mt-5'>
-       <h3 className='ms-4'>Welcome<span className='text-warning'> User</span></h3>
+       <h3 className='ms-4'>Welcome<span className='text-warning'> {username}</span></h3>
        <Row className='mt-4'>
         <Col sm={12} md={8}>
           <MyProject/>

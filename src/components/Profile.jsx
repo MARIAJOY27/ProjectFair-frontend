@@ -1,12 +1,103 @@
 import { faAngleDown } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import React from 'react'
+import React, { useEffect } from 'react'
+import usericon from '../assets/user-icon.png'
 import { useState } from 'react';
 import Collapse from 'react-bootstrap/Collapse';
+import { serverUrl } from '../services/baseUrl';
+import { updateProfileApi } from '../services/allAPI';
+import { toast } from 'react-toastify';
 
 
 function Profile() {
   const [open, setOpen] = useState(false);
+  const [userDetails, setUserDetails] = useState({
+    username:"",
+    email:"",
+    password:"",
+    github:"",
+    linkedin:"",
+    profile:""
+  })
+  const [existingImage, setExistingImage] = useState("")
+  const [preview, setPreview] = useState("")
+  const [updateStatus, setUpdateStatus] = useState(false)
+
+  const handleUpdate = async(e)=>{
+    e.preventDefault()
+    const {username, email,password,github, linkedin,profile} = userDetails
+    if(!github || !linkedin){
+      alert('Please fill the form completely')
+    }
+    else{
+      const reqBody = new FormData()
+
+      reqBody.append("username",username)
+      reqBody.append("email",email)
+      reqBody.append("password",password)
+      reqBody.append("github",github)
+      reqBody.append("linkedin",linkedin)
+      preview?reqBody.append("profile",profile):reqBody.append("profile",existingImage)
+
+      const token = sessionStorage.getItem("token")
+      if(preview){
+        const reqHeader = {
+          "Content-Type": "multipart/form-data",
+          "Authorization": `Bearer ${token}`
+        }
+        const result = await updateProfileApi(reqBody,reqHeader)
+
+        if(result.status == 200){
+          toast.success('Profile updated successfully')
+          sessionStorage.setItem("existingUser",JSON.stringify(result.data))
+          setUpdateStatus(!updateStatus)
+        }
+        else{
+          console.log(result);
+          toast.error('Something went wrong')
+        }
+
+      }
+      else{
+        const reqHeader = {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        }
+        const result = await updateProfileApi(reqBody,reqHeader)
+
+        if(result.status == 200){
+          toast.success('Profile updated successfully')
+          sessionStorage.setItem("existingUser",JSON.stringify(result.data))
+          setUpdateStatus(!updateStatus)
+        }
+        else{
+          console.log(result);
+          toast.error('Something went wrong')
+        }
+
+      }
+
+    }
+  }
+
+  useEffect(()=>{
+    if(sessionStorage.getItem("existingUser")){
+      const user = JSON.parse(sessionStorage.getItem("existingUser"))
+      setUserDetails({...userDetails, username:user.username , email:user.mailId , password:user.password , github:user.github , linkedin:user.linkedIn})
+      setExistingImage(user.profile)
+    }
+  },[updateStatus])
+
+   useEffect(()=>{
+     if(userDetails.profile){
+      setPreview(URL.createObjectURL(userDetails.profile))
+     }
+     else{
+      setPreview("")
+     }
+   },[userDetails.profile])
+
+  console.log(userDetails);
 
   return (
     <>
@@ -23,16 +114,25 @@ function Profile() {
            <div>
 
              <div className='mt-4 d-flex justify-content-center align-items-center flex-column'>
-                <img src="https://static-00.iconduck.com/assets.00/user-icon-2048x2048-ihoxz4vq.png" className='w-50' alt="" />
+              
+                <label htmlFor='image'>
+                  <input id='image' type="file" style={{display:"none"}} onChange={(e)=>setUserDetails({...userDetails,profile:e.target.files[0]})}  />
+                  {existingImage ==""?
+                    <img src={preview?preview:usericon} width={'200px'} height={'200px'} alt="no image" />
+                  :
+                  <img src={preview?preview:`${serverUrl}/uploads/${existingImage}`} width={'200px'} height={'200px'} alt="no image" />
+                  }
+                  </label>
+               
     
                 <div className='my-3 w-100'>
-                  <input type="text" placeholder='Github' className='form-control w-100' />
+                  <input type="text" placeholder='Github' value={userDetails.github} onChange={(e)=>setUserDetails({...userDetails , github:e.target.value})} className='form-control w-100' />
                 </div>
                 <div className='mb-3 w-100'>
-                  <input type="text" placeholder='Website' className='form-control w-100' />
+                  <input type="text" placeholder='LinkedIn' value={userDetails.linkedin} onChange={(e)=>setUserDetails({...userDetails , linkedin:e.target.value})} className='form-control w-100' />
                 </div>
                 <div className='mb-3 w-100'>
-                  <button className='btn w-100' style={{backgroundColor:'yellowgreen',color:'white'}}>Update</button>
+                  <button onClick={handleUpdate} className='btn w-100' style={{backgroundColor:'yellowgreen',color:'white'}}>Update</button>
                 </div>
     
               </div>

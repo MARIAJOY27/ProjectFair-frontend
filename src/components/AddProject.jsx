@@ -1,13 +1,17 @@
-import React, { useEffect } from 'react'
+import React, { useContext, useEffect } from 'react'
 import Button from 'react-bootstrap/Button';
 import { useState } from 'react';
 import Modal from 'react-bootstrap/Modal';
 import { Col, Row } from 'react-bootstrap';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { addProjectApi } from '../services/allAPI';
+import { AddProjectResponseStatusContext } from '../context/Context';
 
 
 function AddProject() {
+  const {setAddResponse} = useContext(AddProjectResponseStatusContext)
+
   //state to hold video details
   const [videoDetails, setVideoDetails] = useState({
     title: "",
@@ -24,6 +28,11 @@ function AddProject() {
   const handleClose = () => setShow(false);
   //function to open the modal
   const handleShow = () => setShow(true);
+  
+  //key attribute can invoke onChange events if its value changes =>line 83
+  const [key, setKey] = useState(false)
+
+  const [token, setToken] = useState("")
 
   //function to clear all data entered in the modal(on clicking cancel button)
   const handleClose1 = () => {
@@ -36,10 +45,11 @@ function AddProject() {
       projectImage: ""
     })
     setPreview("")
+    setKey(!key)
   }
 
   //function to add project details
-  const handleAdd = (e) => {
+  const handleAdd = async(e) => {
     //avoid data loss
     e.preventDefault()
 
@@ -48,11 +58,53 @@ function AddProject() {
       toast.error('Please fill the form completely')
     }
     else {
-      toast.info('proceed')
+      //how to handle uploaded content
+      //1) create an object for FormData class
+      const reqBody = new FormData()
+      //2) use append() method to add data to the body
+      reqBody.append("title",title)
+      reqBody.append("language",language)
+      reqBody.append("github",github)
+      reqBody.append("website",website)
+      reqBody.append("overview",overview)
+      reqBody.append("projectImage",projectImage)
+      if(token){
+
+        let reqHeader = {
+          "Content-Type":"multipart/form-data",
+          "Authorization":`Bearer ${token}`
+        }
+        const result = await addProjectApi(reqBody,reqHeader)
+        // console.log(result);
+        if(result.status==200){
+          handleClose1()
+          handleClose()
+          setAddResponse(result.data)
+        }
+        else{
+          toast.error('Something went wrong')
+          handleClose1()
+          handleClose()
+        }
+        
+      }
     }
+
+   
+
   }
 
   console.log(videoDetails);
+
+  useEffect(()=>{
+     if(sessionStorage.getItem("token")){
+      setToken(sessionStorage.getItem("token"))
+     }
+     else{
+      setToken("")
+     }
+  },[])
+  console.log(token);
 
   useEffect(() => {
     //file converted to url
@@ -76,7 +128,7 @@ function AddProject() {
           <Row>
             <Col md={6} sm={12}>
               <label htmlFor="image">
-                <input id='image' type="file" style={{ display: 'none' }} onChange={(e) => setVideoDetails({ ...videoDetails, projectImage: e.target.files[0] })} />
+                <input id='image' key={key} type="file" style={{ display: 'none' }} onChange={(e) => setVideoDetails({ ...videoDetails, projectImage: e.target.files[0] })} />
                 <img src={preview ? preview : "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQJqriT94F4Hu-pGsKnKUGPgl0y2yiMRoqRneV4mexJSA&s"} alt="no image" width={'350px'} height={'300px'} />
               </label>
             </Col>
